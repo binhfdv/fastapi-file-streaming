@@ -7,12 +7,14 @@ import mimetypes
 import asyncio
 from hypercorn.config import Config
 from hypercorn.asyncio import serve
+import shutil
+
 
 # Create a router
 router = APIRouter()
 
 class DASHServer():
-    def __init__(self, host: str = "127.0.0.1", port: int = 5000, media_path: str = "./media", cache=None):
+    def __init__(self, host: str = "127.0.0.1", port: int = 5000, media_path: str = "./media"):
         self.media_path = media_path
 
         self.config = Config()
@@ -28,39 +30,28 @@ class DASHServer():
         mimetypes.add_type('pointcloud/mpeg-vpcc', '.vpcc')
         mimetypes.add_type('pointcloud/mpeg-gpcc', '.gpcc')
         mimetypes.add_type('application/zip', '.zip')
+    
 
-        self.cache = cache
+    def create_zip(self, dext: str = "drc", project: str = "foo"):
+        """Create a ZIP file containing all XML files."""
+        zip_path = os.path.join(self.media_path, project, "bar", f"latest_{dext}_data.zip")
+        
+        # Remove the existing zip file if it exists
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
 
-    def get_extension(self, path):
-        return os.path.splitext(path)[1]
+        latest_files = [f for f in os.listdir(self.media_path) if f.endswith(dext)]
+        if not latest_files:
+            return None  # No files to zip
+        
+        # Create ZIP archive
+        with shutil.ZipFile(zip_path, 'w') as zipf:
+            for file in latest_files:
+                file_path = os.path.join(self.media_path, file)
+                zipf.write(file_path, arcname=file)
 
-    def load_file(self, path):
-        t_start = T.time()
-
-        data = None
-        if self.cache is not None:
-            data = self.cache.get(path)
-
-        if data is None:
-            logging.debug("Cache miss")
-            try:
-                with open(path, 'rb') as file:
-                    data = file.read()
-            except FileNotFoundError:
-                return None
-            
-            if self.cache is not None:
-                self.cache.set(path, data)
-        else:
-            logging.debug("Cache hit")
-
-        delta = T.time() - t_start
-        logging.debug(f"Response Time \"{path}\" {delta:.2f}ms")
-        return data
-
-    def start(self):
-        asyncio.run(serve(self.app, self.config))
-
+        return zip_path
+    
 
 # Define API Routes using `@router`
 @router.get("/media/{project}")

@@ -63,9 +63,9 @@ class DASHServer():
 
 
 # Define API Routes using `@router`
-@router.get("/media")
-async def media_mpd():
-    filename = os.path.join("./media", "foo", "mpd.xml")
+@router.get("/media/{project}")
+async def media_mpd(project: str):
+    filename = os.path.join("./media", project, "mpd.xml")
     
     if not os.path.exists(filename):
         raise HTTPException(status_code=404, detail="MPD file not found")
@@ -76,9 +76,9 @@ async def media_mpd():
     return Response(content=data, media_type="application/dash+xml")
 
 
-@router.get("/media/{name}/{representation}/{segment}")
-async def media_segment(name: str, representation: str, segment: str):
-    filename = os.path.join("./media", name, representation, segment)
+@router.get("/media/{project}/{representation}/{segment}")
+async def media_segment(project: str, representation: str, segment: str):
+    filename = os.path.join("./media", project, representation, segment)
 
     if not os.path.exists(filename):
         raise HTTPException(status_code=404, detail="Segment file not found")

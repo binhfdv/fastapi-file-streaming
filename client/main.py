@@ -4,7 +4,7 @@ from extract_xml import ExtractXML  # Import the class
 extractor = ExtractXML()
 
 # Use the method to extract BaseURL tags from an XML file
-xml_file = "/workspaces/pydash/client/mpd.xml"  # Replace with your actual XML file path
+xml_file = "/workspaces/pydash/client/foo"  # Replace with your actual XML file path
 base_urls = extractor.extract_base_urls(xml_file)
 
 # Print extracted URLs

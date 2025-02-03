@@ -23,7 +23,7 @@ class DASHServer():
         self.app = FastAPI()
         self.app.include_router(router)  # Attach the router
 
-        self.subscribers = set()  # Store connected clients
+        # self.subscribers = set()  # Store connected clients
 
         # Register MIME types
         mimetypes.add_type('pointcloud/ply', '.ply')
@@ -43,14 +43,21 @@ class DASHServer():
             current_files = set(os.listdir(bar_path))
             new_files = current_files - known_files
 
+            
+            print(current_files)
+
+
             if new_files:
                 known_files = current_files  # Update known files
 
                 # Create ZIP and send to clients
                 zip_filename, zip_path = self.create_zip_stream(project, ext)
-                if zip_filename and self.subscribers:
-                    for subscriber in list(self.subscribers):
-                        await subscriber.put(zip_path)  # Notify clients
+
+                print("-------zip filename: ", zip_filename)
+                print("-------zip path: ", zip_path)
+
+                if zip_filename:# and self.subscribers:
+                    yield zip_path  # Notify clients
 
             await asyncio.sleep(2)  # Check every 2 seconds
 
@@ -81,7 +88,6 @@ class DASHServer():
     
 
     def start(self):
-        self.config.loglevel = "debug"
         asyncio.run(serve(self.app, self.config))
 
 # Define API Routes using `@router`
@@ -130,18 +136,8 @@ async def download_latest_files(project: str, ext: str):
 async def subscribe_for_zip(project: str, ext: str):
     """Client subscribes to automatic ZIP file delivery when new files appear."""
     server = DASHServer()
-    queue = asyncio.Queue()
-    server.subscribers.add(queue)
+    return StreamingResponse(server.watch_project_and_send_zip(project, ext), media_type="application/zip")
 
-    try:
-        while True:
-            zip_path = await queue.get()  # Wait for ZIP notification
-
-            if os.path.exists(zip_path):
-                return StreamingResponse(open(zip_path, "rb"), media_type="application/zip",
-                                         headers={"Content-Disposition": f"attachment; filename={os.path.basename(zip_path)}"})
-    finally:
-        server.subscribers.remove(queue)  # Remove subscriber when done
 
 # Start the server
 if __name__ == "__main__":

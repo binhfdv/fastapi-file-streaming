@@ -5,6 +5,9 @@ import schedule
 from urllib.parse import unquote
 from datetime import datetime
 import argparse
+from logger import CustomLogger
+
+log = CustomLogger()
 
 # Configuration
 API_BASE_URL = "http://127.0.0.1:5000/stream"
@@ -29,7 +32,7 @@ def fetch_zip():
     
     try:
         response = requests.get(url, stream=True)
-        response.raise_for_status()  # Raise error for bad responses (4xx, 5xx)
+        log.error(str(response.raise_for_status()))  # Raise error for bad responses (4xx, 5xx)
 
         # Get filename from response headers
         filename = get_filename_from_response(response)
@@ -44,18 +47,23 @@ def fetch_zip():
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
 
-        print(f"[✓] Downloaded: {file_path}")
+        log.info(f"[✓] Downloaded: {file_path}")
 
     except requests.RequestException as e:
-        print(f"[✗] Failed to fetch ZIP: {e.response.text}")
+        try:
+            log.warning(f"[✗] Failed to fetch ZIP: {e.response.text}")
 
+        except Exception as e:
+            log.error(e)
+            log.debug("... cannot connect to server")
 
 if __name__ == "__main__":
-    print("Starting periodic fetch...")
+    log.info("Starting periodic fetch...")
     parser = argparse.ArgumentParser()
     parser.add_argument("--interval", type=int, default="2")
     args = parser.parse_args()
 
+    log.info(f"Request interval is {args.interval} seconds")
     # Schedule periodic fetching
     schedule.every(args.interval).seconds.do(fetch_zip)
     fetch_zip()  # Run once immediately

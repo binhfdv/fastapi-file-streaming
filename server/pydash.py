@@ -8,6 +8,7 @@ from hypercorn.asyncio import serve
 import shutil
 import zipfile
 from datetime import datetime
+import argparse
 
 # Create a router
 router = APIRouter()
@@ -132,5 +133,10 @@ async def stream_for_zip(project: str, ext: str, background_tasks: BackgroundTas
 
 # Start the server
 if __name__ == "__main__":
-    server = DASHServer()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=5000)
+    args = parser.parse_args()
+
+    server = DASHServer(host=args.host, port=args.port)
     asyncio.run(server.start())

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import Response, FileResponse, StreamingResponse
 import os
 import mimetypes
@@ -23,7 +23,6 @@ class DASHServer():
         self.app = FastAPI()
         self.app.include_router(router)  # Attach the router
 
-        # self.subscribers = set()  # Store connected clients
 
         # Register MIME types
         mimetypes.add_type('pointcloud/ply', '.ply')
@@ -32,35 +31,6 @@ class DASHServer():
         mimetypes.add_type('pointcloud/mpeg-gpcc', '.gpcc')
         mimetypes.add_type('application/zip', '.zip')
     
-
-    async def watch_project_and_send_zip(self, project: str = "foo", ext: str = "drc"):
-        """Continuously watches for new files and streams ZIP when detected."""
-        bar_path = os.path.join(self.media_path, project, "bar")
-
-        known_files = set(os.listdir(bar_path))  # Track existing files
-
-        while True:
-            current_files = set(os.listdir(bar_path))
-            new_files = current_files - known_files
-
-            
-            print(current_files)
-
-
-            if new_files:
-                known_files = current_files  # Update known files
-
-                # Create ZIP and send to clients
-                zip_filename, zip_path = self.create_zip_stream(project, ext)
-
-                print("-------zip filename: ", zip_filename)
-                print("-------zip path: ", zip_path)
-
-                if zip_filename:# and self.subscribers:
-                    yield zip_path  # Notify clients
-
-            await asyncio.sleep(2)  # Check every 2 seconds
-
 
     def create_zip_stream(self, project: str = "foo", ext: str = "drc"):
         """Create a ZIP file containing all latest files."""
@@ -87,12 +57,17 @@ class DASHServer():
         return zip_filename, zip_path
     
 
+    def remove_zip(self, zip_path: str):
+        os.remove(zip_path)
+
+
     def start(self):
         asyncio.run(serve(self.app, self.config))
 
 # Define API Routes using `@router`
 @router.get("/media/{project}")
 async def media_mpd(project: str):
+    """Response with mpd file to client when requested"""
     filename = os.path.join("./media", project, "mpd.xml")
     
     if not os.path.exists(filename):
@@ -106,6 +81,7 @@ async def media_mpd(project: str):
 
 @router.get("/media/{project}/{representation}/{segment}")
 async def media_segment(project: str, representation: str, segment: str):
+    """Response with file (drc, ply, etc.) to client when requested"""
     filename = os.path.join("./media", project, representation, segment)
 
     if not os.path.exists(filename):
@@ -121,8 +97,9 @@ async def media_segment(project: str, representation: str, segment: str):
     return Response(content=data, media_type=content_type)
 
 
-@router.get("/stream/{project}/{ext}")
+@router.get("/fetch/{project}/{ext}")
 async def download_latest_files(project: str, ext: str):
+    """Response data (zip) to client when requested"""
     server = DASHServer()
     _, zip_path = server.create_zip_stream(project, ext)
 
@@ -132,12 +109,26 @@ async def download_latest_files(project: str, ext: str):
     return FileResponse(zip_path, filename=os.path.basename(zip_path), media_type="application/zip")
 
 
-@router.get("/subscribe/{project}/{ext}")
-async def subscribe_for_zip(project: str, ext: str):
-    """Client subscribes to automatic ZIP file delivery when new files appear."""
+@router.get("/stream/{project}/{ext}")
+async def stream_for_zip(project: str, ext: str, background_tasks: BackgroundTasks):
+    """Stream data (zip) to client when requested."""
     server = DASHServer()
-    return StreamingResponse(server.watch_project_and_send_zip(project, ext), media_type="application/zip")
+    _, zip_path = server.create_zip_stream(project, ext)
 
+    if not zip_path:
+        raise HTTPException(status_code=404, detail=f"No {ext} files available")
+    
+    def iterfile():
+        with open(zip_path, mode="rb") as fzip:
+            yield from fzip
+    
+    # remove zip after streamed
+    background_tasks.add_task(server.remove_zip, zip_path)
+
+    headers = {'Content-Disposition': f'attachment; filename="{zip_path.split('/')[-1]}"'}
+    return StreamingResponse(iterfile(),
+                             headers=headers,
+                             media_type="application/zip")
 
 # Start the server
 if __name__ == "__main__":

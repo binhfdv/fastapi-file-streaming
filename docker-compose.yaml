@@ -1,0 +1,34 @@
+services:
+  server:
+    build:
+      context: /workspaces/pydash/server
+    volumes:
+      - "${SERVER_MOUNT}:/app/media/${PROJECT}/bar"
+    env_file:
+      - .env
+    ports:
+      - "${SERVER_PORT}:8080"
+    networks:
+      - my_network
+    command: ["python", "pydash.py", "--host", "${SERVER_HOST}", "--port", "${SERVER_PORT}", "--datadir", "./media"]
+
+  client:
+    build: 
+      context: /workspaces/pydash/client
+    volumes:
+      - "${CLIENT_MOUNT}:/app/downloads"
+    env_file:
+      - .env
+    depends_on:
+      - server
+    networks:
+      - my_network
+    command: ["python", "scheduled_request.py", "--interval", "${INTERVAL}", "--api", "${API_URL}", "--project", "${PROJECT}", "--ext", "${EXT}"]
+
+networks:
+  my_network:
+    driver: bridge
+
+volumes:
+  server_mount:
+  client_mount:

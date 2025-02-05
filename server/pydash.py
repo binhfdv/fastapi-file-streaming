@@ -40,6 +40,10 @@ class DASHServer():
         bar_path = os.path.join(self.media_path, project, "bar")
         archive_path = os.path.join(self.media_path, project, "archive")
 
+        log.info("Creating project directory if not existed")
+        os.makedirs(bar_path, exist_ok=True)
+        os.makedirs(archive_path, exist_ok=True)
+
         try:
             latest_files = [f for f in os.listdir(bar_path) if f.endswith(ext)]
         except Exception as e:

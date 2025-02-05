@@ -10,9 +10,6 @@ from logger import CustomLogger
 log = CustomLogger()
 
 # Configuration
-API_BASE_URL = "http://127.0.0.1:5000/stream"
-PROJECT_NAME = "foo"
-EXTENSION = "drc"
 SAVE_DIR = "./downloads"
 
 # Ensure save directory exists
@@ -26,9 +23,9 @@ def get_filename_from_response(response):
         return unquote(filename)  # Handle URL encoding
     return None  # Fallback to default if no filename is provided
 
-def fetch_zip():
+def fetch_zip(api_base_url: str="http://127.0.0.1:5000/stream", project: str="foo", ext: str="drc"):
     """Fetch and save ZIP file from API while keeping the original filename."""
-    url = f"{API_BASE_URL}/{PROJECT_NAME}/{EXTENSION}"
+    url = f"{api_base_url}/{project}/{ext}"
     
     try:
         response = requests.get(url, stream=True)
@@ -38,7 +35,7 @@ def fetch_zip():
         filename = get_filename_from_response(response)
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{PROJECT_NAME}_{timestamp}.zip"  # Fallback
+            filename = f"{project}_{timestamp}.zip"  # Fallback
 
         file_path = os.path.join(SAVE_DIR, filename)
 
@@ -61,12 +58,15 @@ if __name__ == "__main__":
     log.info("Starting periodic fetch...")
     parser = argparse.ArgumentParser()
     parser.add_argument("--interval", type=int, default="2")
+    parser.add_argument("--api", type=str, default="http://127.0.0.1:5000/stream")
+    parser.add_argument("--project", type=str, default="foo")
+    parser.add_argument("--ext", type=str, default="drc")
     args = parser.parse_args()
 
     log.info(f"Request interval is {args.interval} seconds")
     # Schedule periodic fetching
-    schedule.every(args.interval).seconds.do(fetch_zip)
-    fetch_zip()  # Run once immediately
+    schedule.every(args.interval).seconds.do(lambda: fetch_zip(args.api, args.project, args.ext))
+    fetch_zip(args.api, args.project, args.ext)  # Run once immediately
     while True:
         schedule.run_pending()
         time.sleep(1)

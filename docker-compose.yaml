@@ -1,9 +1,10 @@
 services:
   server:
     build:
-      context: /workspaces/pydash/server
+      context: /workspaces/${WORKSPACE}/server
     volumes:
-      - "${SERVER_MOUNT}:/app/media/${PROJECT}/bar"
+      - "${SERVER_MOUNT}/${PROJECT}/bar/:/app/media/${PROJECT}/bar"
+      - "${SERVER_MOUNT}/${PROJECT}/archive/:/app/media/${PROJECT}/archive"
     env_file:
       - .env
     ports:
@@ -14,9 +15,9 @@ services:
 
   client:
     build: 
-      context: /workspaces/pydash/client
+      context: /workspaces/${WORKSPACE}/client
     volumes:
-      - "${CLIENT_MOUNT}:/app/downloads"
+      - "${CLIENT_MOUNT}/${PROJECT}/download/:/app/downloads"
     env_file:
       - .env
     depends_on:

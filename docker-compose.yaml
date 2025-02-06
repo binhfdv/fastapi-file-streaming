@@ -13,11 +13,11 @@ services:
       - my_network
     command: ["python", "pydash.py", "--host", "${SERVER_HOST}", "--port", "${SERVER_PORT}", "--datadir", "./media"]
 
-  client:
-    build: 
-      context: /workspaces/${WORKSPACE}/client
+  broker:
+    build:
+      context: /workspaces/${WORKSPACE}/broker
     volumes:
-      - "${CLIENT_MOUNT}/${PROJECT}/download/:/app/downloads"
+      - "${BROKER_MOUNT}/${PROJECT}/download/:/app/downloads"
     env_file:
       - .env
     depends_on:
@@ -32,4 +32,4 @@ networks:
 
 volumes:
   server_mount:
-  client_mount:
+  broker_mount:

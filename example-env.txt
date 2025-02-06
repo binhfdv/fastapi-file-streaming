@@ -7,8 +7,8 @@ SERVER_HOST=0.0.0.0
 SERVER_PORT=8080
 SERVER_MOUNT=/workspaces/fastapi-file-streaming/test/media
 
-# Client environment variables
+# Broker environment variables
 INTERVAL=2
 API_URL=http://server:8080/stream
 EXT=drc
-CLIENT_MOUNT=/workspaces/fastapi-file-streaming/test/media
+BROKER_MOUNT=/workspaces/fastapi-file-streaming/test/media

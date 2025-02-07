@@ -38,17 +38,17 @@ services:
       - my_network
     command: ["python", "scheduled_request.py", "--interval", "${INTERVAL}", "--api", "${API_URL}", "--project", "${PROJECT}", "--ext", "${EXT}"]
 
-  depression:
+  decompression:
     build:
-      context: /workspaces/fastapi-file-streaming/depression
+      context: /workspaces/fastapi-file-streaming/decompression
     volumes:
       - "${BROKER_MOUNT}/${PROJECT}/download/:/app/data/compressed"
-      - "${DEPRESSION_MOUNT}/output/:/app/data/depressed"
+      - "${DECOMPRESSION_MOUNT}/output/:/app/data/depressed"
     env_file:
       - .env
     networks:
       - my_network
-    entrypoint: ["/app/depress.sh"]
+    entrypoint: ["/app/decompress.sh"]
 
 networks:
   my_network:

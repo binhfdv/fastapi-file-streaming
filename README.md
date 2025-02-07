@@ -4,12 +4,17 @@
 This project consists of a **server** and a **broker**, each running in separate Docker containers. The server handles API endpoints to transmit data, while the broker makes scheduled requests to the server API endpoints for data.
 
 ## Project Structure
+### Compression
+- **Source Code:** Located in `/workspaces/${WORKSPACE}/server`
+- **Functions:**
+  - `Draco` encoder version `1.5.7`
+  - Compress `.ply` to `.drc`
 ### Server
 - **Source Code:** Located in `/workspaces/${WORKSPACE}/server`
 - **Functions:**
   - Handles API requests
   - Serves broker requests via HTTP
-  - Zip requested data and stream response to brokers
+  - Zip requested data and stream response to brokers (e.g., `.drc -> .zip -> stream`)
   - Runs `pydash.py` with specified host, port, and data directory
 - **Notes**
   - Prepare your data in corresponding directories
@@ -21,23 +26,39 @@ This project consists of a **server** and a **broker**, each running in separate
 - **Source Code:** Located in `/workspaces/${WORKSPACE}/broker`
 - **Functions:**
   - Makes scheduled API requests to the server
-  - Processes received data
-  - Stores downloads in a specified directory
+  - Stores downloads in a specified directory/database
   - Runs `scheduled_request.py` with specified API and parameters
+
+### Decompression
+- **Source Code:** Located in `/workspaces/${WORKSPACE}/server`
+- **Functions:**
+  - `Draco` decoder version `1.5.7`
+  - Decompress `.zip -> .drc -> .ply`
 
 ## Interaction Diagram
 Below is a simplified diagram of the interaction between the server and broker:
 
 ```
-+-----------+        API Requests        +-----------+
-|  Broker   | -------------------------> |  Server   |
-|           | <------------------------- |           |
-|           |       API Responses        |           |
-+-----------+                             +-----------+
+                `Jetson`               |    `Network`     |           `Cloud server`
+                                       |                  |                                     
++--------------+       +----------+    |   API Requests   |   +----------+      +--------------+ 
+|              |       |          | <--|------------------|-- |          |      |              |
+| Compression  |       |  Server  | ---|------------------|-> |  Broker  |      |Decompression |
+|              |       |          |    |  API Responses   |   |          |      |              |
++--------------+       +----------+    |                  |   +----------+      +--------------+
+       |                    ↑          |                  |        |                    ↑
+       |                    |          |  `network can    |        |                    |
+       |     +----------+   |          |  be wifi, etc.`  |        |     +----------+   |
+       |     |          |   |          |                  |        |     |          |   |
+       |---> | Database |---|          |                  |        |---> | Database |---|
+             |          |              |                  |              |          |   
+             +----------+              |                  |              +----------+  
 
+  - The compression gets input data --> compresses them to .drc --> store to database
   - The broker sends scheduled requests to the server.
-  - The server processes requests and returns data.
-  - The broker stores the received data in the mounted volume.
+  - The server processes requests --> checks database --> zips .drc data --> streams data.
+  - The broker stores the received data in the database.
+  - The decompression checks database --> unzips .zip to get .drc data --> decompresses .drc to .ply data
 ```
 
 ## Environment Variables
@@ -48,15 +69,20 @@ Create a `.env` file in the root directory with the following variables:
 
 WORKSPACE=fastapi-file-streaming
 PROJECT=head
+
+# Compression/Decompression environment variables
+COMPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/compression/data
+DEPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/decompression/data
+
 # Server environment variables
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8080
 SERVER_MOUNT=/workspaces/fastapi-file-streaming/test/media
 
 # Broker environment variables
-INTERVAL=2 # request interval in seconds
+INTERVAL=2
 API_URL=http://server:8080/stream
-EXT=drc # file extension for downloads
+EXT=drc
 BROKER_MOUNT=/workspaces/fastapi-file-streaming/test/media
 ```
 
@@ -109,6 +135,20 @@ docker-compose logs -f broker
   docker-compose restart
   ```
 
+## Supports
+- End2end for `.ply` input data.
+- Compression and Decompression: `.ply <--> .drc, .zip <--> .drc`.
+- Database: directory mount.
+- Sofware-based technology: `fastapi` `StreamingResponse`
+
+## Futures
+- Upgrade database: `redis, etc.`
+
+## Notes
+- Current test is running on `1` `ubuntu 22.04 server`
+- When testing with more `ubuntu 22.04 server`,
+  - it needs to modify corresponding `API_URL` to ensure communications between `server` and `broker`.
+  - modify docker compose as required per testing purpose.
 ## License
 This project is licensed under the MIT License.
 

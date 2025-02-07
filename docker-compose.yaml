@@ -1,4 +1,16 @@
 services:
+  compression:
+    build:
+      context: /workspaces/${WORKSPACE}/compression
+    volumes:
+      - "${COMPRESSION_MOUNT}/input/:/app/data/input"
+      - "${SERVER_MOUNT}/${PROJECT}/bar/:/app/data/compressed"
+    env_file:
+      - .env
+    networks:
+      - my_network
+    entrypoint: ["/app/compress.sh"]
+    
   server:
     build:
       context: /workspaces/${WORKSPACE}/server
@@ -25,6 +37,18 @@ services:
     networks:
       - my_network
     command: ["python", "scheduled_request.py", "--interval", "${INTERVAL}", "--api", "${API_URL}", "--project", "${PROJECT}", "--ext", "${EXT}"]
+
+  depression:
+    build:
+      context: /workspaces/fastapi-file-streaming/depression
+    volumes:
+      - "${BROKER_MOUNT}/${PROJECT}/download/:/app/data/compressed"
+      - "${DEPRESSION_MOUNT}/output/:/app/data/depressed"
+    env_file:
+      - .env
+    networks:
+      - my_network
+    entrypoint: ["/app/depress.sh"]
 
 networks:
   my_network:

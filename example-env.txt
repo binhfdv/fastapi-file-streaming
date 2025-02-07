@@ -1,7 +1,12 @@
 # .env file
 
 WORKSPACE=fastapi-file-streaming
-PROJECT=head
+PROJECT=head # project name
+
+# Compression/Depression environment variables
+COMPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/compression/data
+DEPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/depression/data
+
 # Server environment variables
 SERVER_HOST=0.0.0.0
 SERVER_PORT=8080

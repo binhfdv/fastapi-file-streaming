@@ -1,7 +1,7 @@
 #!/bin/bash
 
 INPUT_DIR="./data/input"
-OUTPUT_DIR="./data/output"
+OUTPUT_DIR="./data/compressed"
 
 # Create output directory if it doesn't exist
 mkdir -p "$INPUT_DIR"
@@ -18,5 +18,4 @@ while true; do
             rm -rf "$file"
         fi
     done
-    sleep 1
 done

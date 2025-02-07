@@ -18,5 +18,5 @@ COPY compress.sh /app/compress.sh
 RUN chmod +x /app/compress.sh
 
 # Set entrypoint to run the script
-# ENTRYPOINT ["/app/compress.sh"]
+ENTRYPOINT ["/app/compress.sh"]
 

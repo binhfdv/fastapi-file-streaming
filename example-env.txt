@@ -3,6 +3,12 @@
 WORKSPACE=fastapi-file-streaming
 PROJECT=head
 
+REDIS_COMPRESSION_HOST=redis-compression
+REDIS_COMPRESSION_PORT=6379
+
+REDIS_DECOMPRESSION_HOST=redis-decompression
+REDIS_DECOMPRESSION_PORT=6380
+
 # Compression/Depression environment variables
 COMPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/compression/data
 DECOMPRESSION_MOUNT=/workspaces/fastapi-file-streaming/test/decompression/data

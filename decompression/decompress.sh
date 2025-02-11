@@ -1,7 +1,7 @@
 #!/bin/bash
 
 INPUT_DIR="./data/compressed"
-OUTPUT_DIR="./data/depressed"
+OUTPUT_DIR="./data/decompressed"
 
 # Create necessary directories
 mkdir -p "$INPUT_DIR"

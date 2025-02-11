@@ -10,10 +10,13 @@ import shutil
 import zipfile
 from datetime import datetime
 import argparse
+import redis
 
 # Create a router
 router = APIRouter()
 log = CustomLogger()
+r = redis.Redis(host='localhost', port=6379, db=0)
+METADATA_HASH = "compression_streaming_data"
 
 class DASHServer():
     def __init__(self, host: str = "127.0.0.1", port: int = 5000, media_path: str = "./media"):
@@ -74,6 +77,24 @@ class DASHServer():
 
         return zip_filename, zip_path
     
+
+    def create_zip_stream_redis(self, project: str = "foo", ext: str = "drc"):
+        pass
+
+
+    def list_stored_files(self):
+        files = r.hgetall(METADATA_HASH)
+        if not files:
+            print("No files found in Redis.")
+            return []
+
+        stored_files = []
+        for filename, metadata in files.items():
+            stream_name, chunk_count = metadata.decode().split("|")
+            stored_files.append({"filename": filename.decode(), "stream_name": stream_name, "chunks": chunk_count})
+
+        return stored_files
+
 
     def remove_zip(self, zip_path: str) -> None:
         log.info("Zip files is being removed after streamed")

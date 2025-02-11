@@ -1,4 +1,11 @@
 services:
+  redis-compression:
+    image: redis:latest
+    container_name: redis-compression
+    networks:
+      - my_network
+    ports:
+      - "6379:6379"
   compression:
     build:
       context: /workspaces/${WORKSPACE}/compression
@@ -7,6 +14,8 @@ services:
       - "${SERVER_MOUNT}/${PROJECT}/bar/:/app/data/compressed"
     env_file:
       - .env
+    depends_on:
+      - redis-compression
     networks:
       - my_network
     entrypoint: ["/app/compress.sh"]
@@ -25,6 +34,13 @@ services:
       - my_network
     command: ["python", "pydash.py", "--host", "${SERVER_HOST}", "--port", "${SERVER_PORT}", "--datadir", "./media"]
 
+  redis-decompression:
+    image: redis:latest
+    container_name: redis-decompression
+    networks:
+      - my_network
+    ports:
+      - "6380:6379"
   broker:
     build:
       context: /workspaces/${WORKSPACE}/broker
@@ -34,6 +50,7 @@ services:
       - .env
     depends_on:
       - server
+      - redis-decompression
     networks:
       - my_network
     command: ["python", "scheduled_request.py", "--interval", "${INTERVAL}", "--api", "${API_URL}", "--project", "${PROJECT}", "--ext", "${EXT}"]
@@ -43,9 +60,12 @@ services:
       context: /workspaces/fastapi-file-streaming/decompression
     volumes:
       - "${BROKER_MOUNT}/${PROJECT}/download/:/app/data/compressed"
-      - "${DECOMPRESSION_MOUNT}/output/:/app/data/depressed"
+      - "${DECOMPRESSION_MOUNT}/output/:/app/data/decompressed"
     env_file:
       - .env
+    depends_on:
+      - broker
+      - redis-decompression
     networks:
       - my_network
     entrypoint: ["/app/decompress.sh"]

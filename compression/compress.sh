@@ -34,5 +34,5 @@ while true; do
         fi
     done
 
-    sleep 3  # Avoid continuous looping, adjust if needed
+    # sleep 10
 done

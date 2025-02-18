@@ -28,6 +28,8 @@ services:
       - "${SERVER_MOUNT}/${PROJECT}/archive/:/app/media/${PROJECT}/archive"
     env_file:
       - .env
+    depends_on:
+      - redis-compression
     ports:
       - "${SERVER_PORT}:8080"
     networks:

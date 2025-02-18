@@ -49,7 +49,6 @@ def retrieve_any_stored_file():
         filename = files[i]['filename']
         output_path = f"retrieved_{filename}"
         retrieve_file_from_stream(filename, output_path)
-        print(f"File retrieved as '{output_path}'.")
 
 def retrieve_file_from_stream(filename, output_path):
     metadata = r.hget(METADATA_HASH, filename)

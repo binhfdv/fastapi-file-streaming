@@ -1,3 +1,4 @@
 fastapi==0.115.8
 Hypercorn==0.17.3
 colorama==0.4.6
+redis==5.2.1

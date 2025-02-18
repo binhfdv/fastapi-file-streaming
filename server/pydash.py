@@ -12,11 +12,18 @@ from datetime import datetime
 import argparse
 import redis
 
+
+REDIS_HOST = os.getenv("REDIS_COMPRESSION_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_COMPRESSION_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+
+METADATA_HASH = "compression_streaming_data"
+
 # Create a router
 router = APIRouter()
 log = CustomLogger()
-r = redis.Redis(host='localhost', port=6379, db=0)
-METADATA_HASH = "compression_streaming_data"
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=False)
+
 
 class DASHServer():
     def __init__(self, host: str = "127.0.0.1", port: int = 5000, media_path: str = "./media"):
@@ -78,14 +85,31 @@ class DASHServer():
         return zip_filename, zip_path
     
 
-    def create_zip_stream_redis(self, project: str = "foo", ext: str = "drc"):
-        pass
+    def retrieve_file_from_stream(self, filename, output_path):
+        metadata = r.hget(METADATA_HASH, filename)
+        if not metadata:
+            log.warning("File not found in Redis!")
+            return
+
+        stream_name, chunk_count = metadata.decode().split("|")
+        chunk_count = int(chunk_count)
+        
+        with open(output_path, 'wb') as f:
+            chunks = r.xrange(stream_name)  # Get all chunks from stream
+            for _, data in chunks:
+                f.write(data[b'chunk'])
+
+        log.info(f"File '{filename}' reconstructed as '{output_path}'.")
+        
+        r.delete(stream_name)  # Delete the Redis stream
+        r.hdel(METADATA_HASH, filename)  # Remove metadata entry
+        log.info(f"File '{filename}' removed from Redis after restoration.")
 
 
     def list_stored_files(self):
         files = r.hgetall(METADATA_HASH)
         if not files:
-            print("No files found in Redis.")
+            log.info("No files found in Redis.")
             return []
 
         stored_files = []
@@ -95,6 +119,30 @@ class DASHServer():
 
         return stored_files
 
+
+    def create_zip_stream_redis(self, project: str = "foo", ext: str = "drc"):
+        files = self.list_stored_files()
+        if not files:
+            log.info("Server --- No files found in Redis")
+            return None, None
+        
+        log.info("\nAvailable files:")
+        for i, file in enumerate(files):
+            log.info(f"{i + 1}. {file['filename']} (Chunks: {file['chunks']})")
+
+        bar_path = os.path.join(self.media_path, project, "bar")
+        log.info(f"Creating project: {project}'s directory if not existed")
+        os.makedirs(bar_path, exist_ok=True)
+
+        for i in range(len(files)):
+            filename = files[i]['filename']
+            output_path = os.path.join(bar_path, filename)
+            self.retrieve_file_from_stream(filename, output_path)
+
+        zip_filename, zip_path = self.create_zip_stream(project, ext)
+        
+        return zip_filename, zip_path
+    
 
     def remove_zip(self, zip_path: str) -> None:
         log.info("Zip files is being removed after streamed")
@@ -178,7 +226,7 @@ async def stream_for_zip(project: str, ext: str, background_tasks: BackgroundTas
         log.warning(f"Unsupported file type .{ext}")
         raise HTTPException(status_code=406, detail="Unsupported file type")
     
-    _, zip_path = server.create_zip_stream(project, ext)
+    _, zip_path = server.create_zip_stream_redis(project, ext)
 
     if not zip_path:
         log.info(f"No .{ext} files available")

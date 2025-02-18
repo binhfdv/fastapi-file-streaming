@@ -30,4 +30,5 @@ while true; do
             rm -f "$drc_file"
         fi
     done
+    # sleep 10
 done

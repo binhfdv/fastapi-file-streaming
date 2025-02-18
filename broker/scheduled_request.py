@@ -69,5 +69,5 @@ if __name__ == "__main__":
     fetch_zip(args.api, args.project, args.ext)  # Run once immediately
     while True:
         schedule.run_pending()
-        # time.sleep(1)
+        # time.sleep(5)
 
